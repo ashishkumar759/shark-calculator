@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shark Exchange - Position Size Calculator</title>
+    <style>
+        :root {
+            --primary: #00e5ff;
+            --bg-dark: #0b0f19;
+            --card-bg: #131a2a;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --danger: #ff4d4d;
+            --success: #00ff88;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; }
+        header h1 { color: var(--primary); margin: 0; font-size: 2.5rem; }
+        header p { color: var(--text-muted); margin: 5px 0; }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .card h2 { color: var(--primary); margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9rem; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            background: #0b0f19;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--primary); }
+        
+        .radio-group { display: flex; gap: 10px; }
+        .radio-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: #0b0f19;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .radio-btn.active { background: var(--primary); color: #000; font-weight: bold; border-color: var(--primary); }
+        .radio-btn.long.active { background: var(--success); }
+        .radio-btn.short.active { background: var(--danger); }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-secondary { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+        
+        /* Install Button Styling */
+        .btn-install {
+            background: linear-gradient(45deg, var(--primary), var(--success));
+            color: #000;
+            font-weight: bold;
+            margin-top: 10px;
+            border: none;
+        }
+
+        .output-val { font-size: 1.2rem; font-weight: bold; color: #fff; }
+        .sub-val { font-size: 0.9rem; color: var(--text-muted); }
+        
+        .warning {
+            background: rgba(255, 77, 77, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        th { color: var(--text-muted); font-weight: normal; width: 40%; }
+        
+        .pro-tip {
+            background: rgba(0, 229, 255, 0.05);
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 0 6px 6px 0;
+        }
+        footer { text-align: center; color: var(--text-muted); margin-top: 30px; font-size: 0.8rem; }
+
+        /* --- MODAL STYLES --- */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.85); 
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: 8% auto; 
+            padding: 30px;
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            width: 90%;
+            max-width: 600px;
+            border-radius: 12px;
+            color: var(--text-main);
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 229, 255, 0.15);
+        }
+        .close-modal {
+            color: var(--text-muted);
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .close-modal:hover { color: var(--danger); }
+        .modal-content h2 {
+            color: var(--primary);
+            margin-top: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        .modal-content h3 {
+            color: #fff;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        .modal-content h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        .modal-content ul {
+            padding-left: 20px;
+            color: var(--text-muted);
+            line-height: 1.8;
+            margin-top: 0;
+        }
+        .modal-content li strong {
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🦈 Shark Exchange</h1>
+        <p>Position Size Calculator — Professional risk management for Futures Trading</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Current Pair: <strong>BTC-USDT</strong> | Min Size: <strong>0.002 BTC</strong></p>
+    </header>
+
+    <!-- INPUTS -->
+    <div class="card">
+        <h2>Trade Parameters</h2>
+        <div class="grid">
+            <div class="form-group">
+                <label>Account Balance (USDT)</label>
+                <input type="number" id="balance" placeholder="e.g. 1000" step="any">
+            </div>
+            <div class="form-group">
+                <label>Risk Per Trade (%)</label>
+                <div class="radio-group" id="riskGroup">
+                    <div class="radio-btn" data-val="0.5">0.5%</div>
+                    <div class="radio-btn active" data-val="1">1%</div>
+                    <div class="radio-btn" data-val="2">2%</div>
+                    <div class="radio-btn" data-val="5">5%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Trade Direction</label>
+            <div class="radio-group" id="dirGroup">
+                <div class="radio-btn long active" data-val="LONG">LONG (Buy)</div>
+                <div class="radio-btn short" data-val="SHORT">SHORT (Sell)</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="form-group">
+                <label>Entry Price (USDT)</label>
+                <input type="number" id="entry" placeholder="e.g. 60000" step="any">
+            </div>
+            <div class="form-group">
+                <label>Stop Loss Price (USDT)</label>
+                <input type="number" id="stop" placeholder="e.g. 59000" step="any">
+            </div>
+            <div class="form-group">
+                <label>Leverage</label>
+                <input type="number" id="leverage" value="10" step="any">
+            </div>
+            <div class="form-group">
+                <label>Trading Fee (%)</label>
+                <input type="number" id="fee" value="0.05" step="any">
+            </div>
+            <div class="form-group">
+                <label>USD to INR Rate</label>
+                <input type="number" id="inrRate" value="83.50" step="any">
+            </div>
+        </div>
+
+        <button class="btn" onclick="calculate()">Calculate Recommended Size</button>
+        <button class="btn btn-secondary" onclick="fetchLivePrice()">🔄 Fetch Live BTC Price</button>
+        
+        <!-- NEW INSTALL BUTTON -->
+        <button class="btn btn-install" onclick="openInstallGuide()">📲 Install as App</button>
+    </div>
+
+    <!-- OUTPUTS -->
+    <div class="card">
+        <h2>⚡ Position Details</h2>
+        <div class="grid">
+            <div class="form-group">
+                <label>Position Size (BTC) <span style="color:var(--primary)">✏️ editable</span></label>
+                <input type="number" id="posSize" placeholder="0.00" step="0.001" oninput="recalcFromPos()">
+            </div>
+            <div class="form-group">
+                <label>Max Risk Amount (USDT) <span style="color:var(--primary)">✏️ editable</span></label>
+                <input type="number" id="maxRisk" placeholder="0.00" step="any" oninput="recalcFromRisk()">
+            </div>
+        </div>
+
+        <div class="grid" style="margin-top:20px;">
+            <div>
+                <label>Notional Value</label>
+                <div class="output-val">$ <span id="outNotionalUSD">0.00</span></div>
+                <div class="sub-val">₹ <span id="outNotionalINR">0.00</span></div>
+            </div>
+            <div>
+                <label>Margin Required</label>
+                <div class="output-val">$ <span id="outMarginUSD">0.00</span></div>
+                <div class="sub-val">₹ <span id="outMarginINR">0.00</span></div>
+            </div>
+        </div>
+
+        <div class="warning" id="minSizeWarning">
+            ⚠️ Minimum position size is 0.002 BTC. Your actual risk will be higher than your target.
+        </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="card">
+        <h2>📊 Trade Summary</h2>
+        <table>
+            <tr><th>Direction</th><td id="sumDir">-</td></tr>
+            <tr><th>Entry Price</th><td>$ <span id="sumEntryUSD">0.00</span> | ₹ <span id="sumEntryINR">0.00</span></td></tr>
+            <tr><th>Stop Loss</th><td>$ <span id="sumStopUSD">0.00</span> | ₹ <span id="sumStopINR">0.00</span></td></tr>
+            <tr><th>Stop Distance</th><td>$ <span id="sumDistUSD">0.00</span> | ₹ <span id="sumDistINR">0.00</span></td></tr>
+            <tr><th>Est. Fees (Entry + Exit)</th><td>$ <span id="sumFeesUSD">0.00</span> | ₹ <span id="sumFeesINR">0.00</span></td></tr>
+            <tr><th>Actual Risk %</th><td><strong id="sumActualRisk">0.00%</strong></td></tr>
+        </table>
+
+        <div class="pro-tip">
+            💡 <strong>Pro Tip:</strong> With a $100 balance, risking 1% means you can only afford to lose $1.00. Keep your stop loss tight!
+        </div>
+    </div>
+
+    <footer>
+        © 2026 Shark Exchange Position Calculator | Trade Responsibly
+    </footer>
+</div>
+
+<!-- INSTALL GUIDE MODAL -->
+<div id="installModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeInstallGuide()">&times;</span>
+        <h2>How to Get One-Click Access</h2>
+        
+        <h3>📱 On Mobile (Fastest)</h3>
+        <div class="guide-section">
+            <h4>Android (Chrome):</h4>
+            <ul>
+                <li>Open the HTML file in Chrome</li>
+                <li>Tap <strong>⋮</strong> menu → "Install app" or "Add to Home screen"</li>
+                <li>Done! 🦈 icon appears on your home screen — one tap to launch</li>
+            </ul>
+        </div>
+        <div class="guide-section">
+            <h4>iPhone (Safari):</h4>
+            <ul>
+                <li>Open the file in Safari</li>
+                <li>Tap <strong>Share</strong> button → "Add to Home Screen"</li>
+                <li>Done! Full-screen app experience</li>
+            </ul>
+        </div>
+
+        <h3>💻 On Desktop</h3>
+        <div class="guide-section">
+            <h4>Chrome / Edge:</h4>
+            <ul>
+                <li>Click the <strong>⋮</strong> menu (top-right)</li>
+                <li>"Cast, save, and share" → "Install page as app..."</li>
+                <li>Name it "Shark Calculator" → Install</li>
+                <li>It now opens in its own window with its own taskbar icon!</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- UI INTERACTIONS ---
+    document.querySelectorAll('.radio-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.parentElement.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            saveState(); 
+        });
+    });
+
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', saveState);
+    });
+
+    // --- LOCAL STORAGE (RETAINING VALUES) ---
+    function saveState() {
+        const state = {
+            balance: document.getElementById('balance').value,
+            risk: document.querySelector('#riskGroup .active').dataset.val,
+            direction: document.querySelector('#dirGroup .active').dataset.val,
+            entry: document.getElementById('entry').value,
+            stop: document.getElementById('stop').value,
+            leverage: document.getElementById('leverage').value,
+            fee: document.getElementById('fee').value,
+            inrRate: document.getElementById('inrRate').value,
+            posSize: document.getElementById('posSize').value,
+            maxRisk: document.getElementById('maxRisk').value
+        };
+        localStorage.setItem('sharkCalcState', JSON.stringify(state));
+    }
+
+    function loadState() {
+        const saved = localStorage.getItem('sharkCalcState');
+        if (saved) {
+            const state = JSON.parse(saved);
+            document.getElementById('balance').value = state.balance || '';
+            document.getElementById('entry').value = state.entry || '';
+            document.getElementById('stop').value = state.stop || '';
+            document.getElementById('leverage').value = state.leverage || '10';
+            document.getElementById('fee').value = state.fee || '0.05';
+            document.getElementById('inrRate').value = state.inrRate || '83.50';
+            document.getElementById('posSize').value = state.posSize || '';
+            document.getElementById('maxRisk').value = state.maxRisk || '';
+
+            document.querySelectorAll('#riskGroup .radio-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.val === state.risk);
+            });
+            document.querySelectorAll('#dirGroup .radio-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.val === state.direction);
+            });
+
+            if(state.entry && state.stop && state.balance) {
+                calculate(false); 
+            }
+        }
+    }
+
+    // --- CALCULATION LOGIC ---
+    function calculate(showAlert = true) {
+        const balance = parseFloat(document.getElementById('balance').value) || 0;
+        const riskPct = parseFloat(document.querySelector('#riskGroup .active').dataset.val) || 1;
+        const direction = document.querySelector('#dirGroup .active').dataset.val;
+        const entry = parseFloat(document.getElementById('entry').value) || 0;
+        const stop = parseFloat(document.getElementById('stop').value) || 0;
+        const leverage = parseFloat(document.getElementById('leverage').value) || 1;
+        const feePct = parseFloat(document.getElementById('fee').value) || 0;
+        const inrRate = parseFloat(document.getElementById('inrRate').value) || 83.5;
+
+        if(balance <= 0 || entry <= 0 || stop <= 0) {
+            if(showAlert) alert("Please fill in Balance, Entry, and Stop Loss prices.");
+            return;
+        }
+
+        const stopDistance = Math.abs(entry - stop);
+        const targetRiskUSD = balance * (riskPct / 100);
+        let posSize = targetRiskUSD / stopDistance;
+        let isMinSizeTriggered = false;
+
+        if (posSize < 0.002) {
+            posSize = 0.002;
+            isMinSizeTriggered = true;
+        }
+
+        const notional = posSize * entry;
+        const margin = notional / leverage;
+        const actualRiskUSD = posSize * stopDistance;
+        const actualRiskPct = (actualRiskUSD / balance) * 100;
+        const fees = (notional * (feePct / 100)) * 2; 
+
+        document.getElementById('posSize').value = posSize.toFixed(4);
+        document.getElementById('maxRisk').value = actualRiskUSD.toFixed(2);
+        
+        updateVal('outNotional', notional, inrRate);
+        updateVal('outMargin', margin, inrRate);
+        
+        document.getElementById('sumDir').innerText = direction;
+        document.getElementById('sumDir').style.color = direction === 'LONG' ? 'var(--success)' : 'var(--danger)';
+        
+        updateVal('sumEntry', entry, inrRate);
+        updateVal('sumStop', stop, inrRate);
+        updateVal('sumDist', stopDistance, inrRate);
+        updateVal('sumFees', fees, inrRate);
+        
+        document.getElementById('sumActualRisk').innerText = actualRiskPct.toFixed(2) + '%';
+        document.getElementById('sumActualRisk').style.color = isMinSizeTriggered ? 'var(--danger)' : 'var(--success)';
+
+        document.getElementById('minSizeWarning').style.display = isMinSizeTriggered ? 'block' : 'none';
+
+        saveState(); 
+    }
+
+    function recalcFromPos() {
+        const posSize = parseFloat(document.getElementById('posSize').value) || 0;
+        const entry = parseFloat(document.getElementById('entry').value) || 0;
+        const stop = parseFloat(document.getElementById('stop').value) || 0;
+        const balance = parseFloat(document.getElementById('balance').value) || 0;
+        const leverage = parseFloat(document.getElementById('leverage').value) || 1;
+        const feePct = parseFloat(document.getElementById('fee').value) || 0;
+        const inrRate = parseFloat(document.getElementById('inrRate').value) || 83.5;
+
+        if(posSize > 0 && entry > 0) {
+            const notional = posSize * entry;
+            const margin = notional / leverage;
+            const stopDistance = Math.abs(entry - stop);
+            const actualRiskUSD = posSize * stopDistance;
+            const fees = (notional * (feePct / 100)) * 2;
+
+            document.getElementById('maxRisk').value = actualRiskUSD.toFixed(2);
+            updateVal('outNotional', notional, inrRate);
+            updateVal('outMargin', margin, inrRate);
+            updateVal('sumFees', fees, inrRate);
+            
+            const actualRiskPct = balance > 0 ? (actualRiskUSD / balance) * 100 : 0;
+            document.getElementById('sumActualRisk').innerText = actualRiskPct.toFixed(2) + '%';
+            saveState();
+        }
+    }
+
+    function recalcFromRisk() {
+        const maxRiskUSD = parseFloat(document.getElementById('maxRisk').value) || 0;
+        const entry = parseFloat(document.getElementById('entry').value) || 0;
+        const stop = parseFloat(document.getElementById('stop').value) || 0;
+        const balance = parseFloat(document.getElementById('balance').value) || 0;
+        const leverage = parseFloat(document.getElementById('leverage').value) || 1;
+        const feePct = parseFloat(document.getElementById('fee').value) || 0;
+        const inrRate = parseFloat(document.getElementById('inrRate').value) || 83.5;
+
+        if(maxRiskUSD > 0 && entry > 0) {
+            const stopDistance = Math.abs(entry - stop);
+            let posSize = stopDistance > 0 ? maxRiskUSD / stopDistance : 0;
+            
+            if (posSize < 0.002) posSize = 0.002;
+
+            const notional = posSize * entry;
+            const margin = notional / leverage;
+            const fees = (notional * (feePct / 100)) * 2;
+
+            document.getElementById('posSize').value = posSize.toFixed(4);
+            updateVal('outNotional', notional, inrRate);
+            updateVal('outMargin', margin, inrRate);
+            updateVal('sumFees', fees, inrRate);
+            
+            const actualRiskPct = balance > 0 ? (maxRiskUSD / balance) * 100 : 0;
+            document.getElementById('sumActualRisk').innerText = actualRiskPct.toFixed(2) + '%';
+            saveState();
+        }
+    }
+
+    function updateVal(prefix, usdVal, inrRate) {
+        document.getElementById(prefix + 'USD').innerText = usdVal.toFixed(2);
+        document.getElementById(prefix + 'INR').innerText = (usdVal * inrRate).toFixed(2);
+    }
+
+    async function fetchLivePrice() {
+        try {
+            const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+            const data = await res.json();
+            document.getElementById('entry').value = parseFloat(data.price).toFixed(2);
+            saveState();
+            calculate(false);
+        } catch (e) {
+            alert("Failed to fetch live price. Check your internet connection.");
+        }
+    }
+
+    // --- MODAL LOGIC ---
+    function openInstallGuide() {
+        document.getElementById('installModal').style.display = 'block';
+    }
+    function closeInstallGuide() {
+        document.getElementById('installModal').style.display = 'none';
+    }
+    // Close modal if user clicks outside the content box
+    window.onclick = function(event) {
+        let modal = document.getElementById('installModal');
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    // --- INITIALIZATION ---
+    window.onload = function() {
+        loadState();
+    };
+</script>
+
+</body>
+</html>
